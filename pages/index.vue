@@ -19,8 +19,7 @@
         </div>
         <h2
           class="font-serif text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 mb-3 uppercase">
-          {{ isTransitioning ? (currentSceneId === 'outdoor' ? 'ENTERING THE CHRONOS CLUB...' : 'RETURNING TO
-          NEO - KYOTO...') : 'NEO - KYOTO VR -360' }}
+          {{ isTransitioning ? (currentSceneId === 'outdoor' ? 'ENTERING THE CHRONOS CLUB...' : 'RETURNING TO NEO-KYOTO...') : 'NEO-KYOTO VR-360' }}
         </h2>
         <p class="text-xs tracking-widest text-cyan-400/80 font-mono mb-6 uppercase">
           {{ isTransitioning ? 'Warping Neural Environment...' : `Loading Environment... ${loadProgress}%` }}
