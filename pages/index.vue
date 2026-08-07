@@ -13,13 +13,14 @@
           <div class="w-24 h-24 border-4 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin"></div>
           <div class="absolute w-16 h-16 border-4 border-fuchsia-500/20 border-b-fuchsia-500 rounded-full animate-spin"
             style="animation-direction: reverse; animation-duration: 1.5s;"></div>
-          <LogIn v-if="targetSceneId === 'inside_bar'" class="w-8 h-8 text-cyan-400 absolute animate-bounce" />
+          <Building2 v-if="targetSceneId === 'cyber_mall'" class="w-8 h-8 text-cyan-400 absolute animate-bounce" />
+          <LogIn v-else-if="targetSceneId === 'inside_bar'" class="w-8 h-8 text-fuchsia-400 absolute animate-bounce" />
           <LogOut v-else-if="targetSceneId === 'outdoor'" class="w-8 h-8 text-emerald-400 absolute animate-bounce" />
           <Compass v-else class="w-8 h-8 text-cyan-400 absolute animate-pulse" />
         </div>
         <h2
-          class="font-serif text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 mb-3 uppercase">
-          {{ isTransitioning ? (currentSceneId === 'outdoor' ? 'ENTERING THE CHRONOS CLUB...' : 'RETURNING TO NEO-KYOTO...') : 'NEO-KYOTO VR-360' }}
+          class="font-serif text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 mb-3 uppercase text-center px-4">
+          {{ isTransitioning ? `ENTERING ${scenes[targetSceneId || 'outdoor'].name}...` : 'NEO-KYOTO VR-360' }}
         </h2>
         <p class="text-xs tracking-widest text-cyan-400/80 font-mono mb-6 uppercase">
           {{ isTransitioning ? 'Warping Neural Environment...' : `Loading Environment... ${loadProgress}%` }}
@@ -35,17 +36,13 @@
     <header class="absolute top-0 inset-x-0 z-30 p-6 flex justify-between items-start pointer-events-none">
       <div
         class="flex items-center gap-4 bg-gray-900/85 backdrop-blur-md border border-cyan-500/30 px-5 py-3 rounded-2xl shadow-2xl pointer-events-auto">
-        <div
-          :class="['w-3 h-3 rounded-full animate-ping', currentSceneId === 'inside_bar' ? 'bg-fuchsia-400' : 'bg-cyan-400']">
-        </div>
+        <div :class="['w-3 h-3 rounded-full animate-ping', getBadgeColor(currentSceneId)]"></div>
         <div>
           <h1 class="font-bold text-base md:text-lg tracking-wider text-white flex items-center gap-2">
             <span>{{ scenes[currentSceneId].name }}</span>
-            <span :class="[
-              'text-[10px] px-2 py-0.5 rounded border uppercase font-mono',
-              currentSceneId === 'inside_bar' ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-            ]">
-              {{ currentSceneId === 'inside_bar' ? 'BAR INTERIOR' : 'CITY SKYLINE' }}
+            <span
+              :class="['text-[10px] px-2 py-0.5 rounded border uppercase font-mono', getBadgeStyle(currentSceneId)]">
+              {{ scenes[currentSceneId].category }}
             </span>
           </h1>
           <p class="text-xs text-gray-400 font-mono flex items-center gap-2">
@@ -57,15 +54,30 @@
         </div>
       </div>
 
-      <!-- Action Badges / Top Right -->
+      <!-- Action Badges / Location Picker Top Right -->
       <div class="flex items-center gap-3 pointer-events-auto">
-        <!-- Quick Switch Location Button -->
-        <button @click="switchScene(currentSceneId === 'outdoor' ? 'inside_bar' : 'outdoor')"
-          class="p-3 bg-gradient-to-r from-fuchsia-600/80 to-cyan-600/80 hover:from-fuchsia-500 hover:to-cyan-500 backdrop-blur-md border border-fuchsia-400/50 text-white font-medium text-xs rounded-2xl transition-all shadow-lg flex items-center gap-2 font-mono tracking-wider">
-          <LogIn v-if="currentSceneId === 'outdoor'" class="w-4 h-4" />
-          <LogOut v-else class="w-4 h-4" />
-          <span class="hidden sm:inline">{{ currentSceneId === 'outdoor' ? 'ENTER BAR' : 'EXIT TO CITY' }}</span>
-        </button>
+        <!-- Quick Location Dropdown Picker -->
+        <div class="relative">
+          <button @click="isLocationMenuOpen = !isLocationMenuOpen"
+            class="p-3 bg-gray-900/85 hover:bg-gray-800 backdrop-blur-md border border-cyan-500/40 text-white font-medium text-xs rounded-2xl transition-all shadow-lg flex items-center gap-2 font-mono tracking-wider">
+            <MapPin class="w-4 h-4 text-cyan-400" />
+            <span class="hidden sm:inline">TELEPORT DESTINATION</span>
+            <ChevronDown class="w-3.5 h-3.5 text-gray-400" />
+          </button>
+
+          <!-- Location Menu Dropdown -->
+          <div v-if="isLocationMenuOpen"
+            class="absolute right-0 top-14 w-64 bg-gray-900/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl p-2 shadow-2xl z-50 flex flex-col gap-1">
+            <button v-for="(sceneConfig, key) in scenes" :key="key" @click="selectSceneFromMenu(key as SceneKey)"
+              :class="[
+                'w-full text-left px-3.5 py-2.5 rounded-xl font-mono text-xs flex items-center justify-between transition-colors',
+                currentSceneId === key ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              ]">
+              <span>{{ sceneConfig.name }}</span>
+              <span class="text-[10px] opacity-75">({{ sceneConfig.category }})</span>
+            </button>
+          </div>
+        </div>
 
         <!-- Audio Button -->
         <button @click="toggleAudio" :class="[
@@ -98,8 +110,9 @@
             </div>
             <div
               class="w-10 h-10 rounded-full bg-fuchsia-900/90 border-2 border-fuchsia-300 shadow-xl shadow-fuchsia-500/50 flex items-center justify-center text-fuchsia-200 group-hover:scale-125 transition-transform duration-300">
-              <LogIn v-if="spot.targetScene === 'inside_bar'" class="w-5 h-5 animate-pulse" />
-              <LogOut v-else class="w-5 h-5 animate-pulse" />
+              <Building2 v-if="spot.targetScene === 'cyber_mall'" class="w-5 h-5 animate-pulse text-cyan-300" />
+              <LogIn v-else-if="spot.targetScene === 'inside_bar'" class="w-5 h-5 animate-pulse text-fuchsia-300" />
+              <LogOut v-else class="w-5 h-5 animate-pulse text-emerald-300" />
             </div>
             <!-- Portal Label Badge -->
             <div
@@ -156,7 +169,7 @@
           </p>
           <div
             class="flex justify-between items-center pt-4 border-t border-gray-800 text-xs font-mono text-cyan-400/80">
-            <span>LOCATION: {{ currentSceneId.toUpperCase() }}</span>
+            <span>LOCATION: {{ scenes[currentSceneId].name }}</span>
             <button @click="activeHotspot = null"
               class="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-xl transition-colors font-sans font-medium text-xs">
               Close Info
@@ -234,12 +247,18 @@ import {
   Eye,
   Maximize,
   LogIn,
-  LogOut
+  LogOut,
+  Building2,
+  MapPin,
+  ChevronDown
 } from 'lucide-vue-next'
+
+type SceneKey = 'outdoor' | 'cyber_mall' | 'inside_bar'
 
 const canvasContainer = ref<HTMLDivElement | null>(null)
 const isLoading = ref(true)
 const isTransitioning = ref(false)
+const isLocationMenuOpen = ref(false)
 const loadProgress = ref(0)
 const isAutoRotate = ref(true)
 const isAudioPlaying = ref(false)
@@ -247,14 +266,14 @@ const showHotspots = ref(true)
 const currentFov = ref(75)
 const currentHeading = ref(0)
 
-const currentSceneId = ref<'outdoor' | 'inside_bar'>('outdoor')
-const targetSceneId = ref<'outdoor' | 'inside_bar' | null>(null)
+const currentSceneId = ref<SceneKey>('outdoor')
+const targetSceneId = ref<SceneKey | null>(null)
 
 interface Hotspot {
   id: number
   title: string
   type: 'info' | 'teleport'
-  targetScene?: 'outdoor' | 'inside_bar'
+  targetScene?: SceneKey
   description?: string
   coords: { x: number; y: number; z: number }
   screenX: number
@@ -264,26 +283,37 @@ interface Hotspot {
 
 const activeHotspot = ref<Hotspot | null>(null)
 
-// Scene Configurations & Hotspots
-const scenes = {
+// 3 VR360 Scenes Configuration
+const scenes: Record<SceneKey, { name: string; category: string; texture: string; hotspots: Hotspot[] }> = {
   outdoor: {
     name: 'NEO-KYOTO CITY SKYLINE',
+    category: 'OUTDOOR BALCONY',
     texture: '/image/paranoma.png',
     hotspots: [
       {
         id: 1,
-        title: 'ENTER CYBER BAR ("The Chronos Club")',
-        type: 'teleport' as const,
-        targetScene: 'inside_bar' as const,
-        coords: { x: 300, y: -120, z: -280 },
+        title: 'ENTER CYBER MALL ("Neo-Kyoto Mall")',
+        type: 'teleport',
+        targetScene: 'cyber_mall',
+        coords: { x: -220, y: -40, z: -350 },
         screenX: 0,
         screenY: 0,
         visible: false
       },
       {
         id: 2,
+        title: 'ENTER CYBER BAR ("The Chronos Club")',
+        type: 'teleport',
+        targetScene: 'inside_bar',
+        coords: { x: 300, y: -120, z: -280 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 3,
         title: 'NEO-KYOTO Central Citadel',
-        type: 'info' as const,
+        type: 'info',
         description: 'The monumental core of Neo-Kyoto featuring high-density vertical architecture, energy conduits, and mega-holographic displays.',
         coords: { x: 0, y: 100, z: -400 },
         screenX: 0,
@@ -291,21 +321,68 @@ const scenes = {
         visible: false
       },
       {
-        id: 3,
+        id: 4,
         title: 'Elevated Monorail Network',
-        type: 'info' as const,
+        type: 'info',
         description: 'Autonomous maglev sky-trains operating at 300 km/h, interconnecting upper urban strata and industrial hubs across the metropolis.',
         coords: { x: -350, y: -20, z: -250 },
         screenX: 0,
         screenY: 0,
         visible: false
+      }
+    ]
+  },
+  cyber_mall: {
+    name: 'NEO-KYOTO STATION CYBER MALL',
+    category: 'MALL & ARCADE DOME',
+    texture: '/image/neokyoto-paranoma.png',
+    hotspots: [
+      {
+        id: 20,
+        title: 'ENTER THE CHRONOS BAR',
+        type: 'teleport',
+        targetScene: 'inside_bar',
+        coords: { x: 320, y: -50, z: -250 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
       },
       {
-        id: 4,
-        title: 'VR Viewport Promenade',
-        type: 'info' as const,
-        description: 'Observation balcony overlooking the multi-level traffic decks, offering panoramic sunset vistas over the futuristic skyline.',
-        coords: { x: 150, y: -160, z: 350 },
+        id: 21,
+        title: 'EXIT TO CITY SKYLINE',
+        type: 'teleport',
+        targetScene: 'outdoor',
+        coords: { x: -380, y: -20, z: -150 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 22,
+        title: 'Cyber-Dojo & Virtual Arcade',
+        type: 'info',
+        description: 'Multi-level gaming complex featuring full-immersion neural VR martial arts and retro arcade simulators.',
+        coords: { x: 0, y: 80, z: -400 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 23,
+        title: 'Kurosawa Tech & Geisha-Bot 7 Store',
+        type: 'info',
+        description: 'Boutique outlet showcasing next-generation android assistant bots, cybernetic implants, and neural upgrades.',
+        coords: { x: 250, y: 20, z: 320 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 24,
+        title: 'Ghost-Shell Wear & Fashion Station',
+        type: 'info',
+        description: 'High-end cyberpunk apparel shop offering active-camo jackets, LED streetwear, and smart textiles.',
+        coords: { x: -320, y: 40, z: 280 },
         screenX: 0,
         screenY: 0,
         visible: false
@@ -314,22 +391,33 @@ const scenes = {
   },
   inside_bar: {
     name: 'THE CHRONOS CLUB (BAR INTERIOR)',
+    category: 'BAR INTERIOR',
     texture: '/image/inside_bar_paranoma.png',
     hotspots: [
       {
         id: 10,
-        title: 'EXIT BAR -> Return to Neo-Kyoto City',
-        type: 'teleport' as const,
-        targetScene: 'outdoor' as const,
-        coords: { x: 350, y: -20, z: -200 },
+        title: 'GO TO CYBER MALL & ARCADE',
+        type: 'teleport',
+        targetScene: 'cyber_mall',
+        coords: { x: -320, y: -40, z: -240 },
         screenX: 0,
         screenY: 0,
         visible: false
       },
       {
         id: 11,
+        title: 'EXIT TO CITY SKYLINE',
+        type: 'teleport',
+        targetScene: 'outdoor',
+        coords: { x: 350, y: -20, z: -200 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 12,
         title: 'Android Bartender (Unit-7)',
-        type: 'info' as const,
+        type: 'info',
         description: 'Serves rare synthetic spirits, glowing neon cocktails, and cybernetic energy brews to cyber-citizens and travelers.',
         coords: { x: 60, y: -40, z: -400 },
         screenX: 0,
@@ -337,21 +425,11 @@ const scenes = {
         visible: false
       },
       {
-        id: 12,
+        id: 13,
         title: 'Live Synthwave Keytar Stage',
-        type: 'info' as const,
+        type: 'info',
         description: 'Featuring nightly keytar solos and cyber-synth performances with responsive holographic light displays.',
         coords: { x: 420, y: 10, z: 150 },
-        screenX: 0,
-        screenY: 0,
-        visible: false
-      },
-      {
-        id: 13,
-        title: 'Holographic Touch Tables & VIP Booth',
-        type: 'info' as const,
-        description: 'High-tech private booths equipped with interactive touch-table interfaces for ordering and digital games.',
-        coords: { x: -380, y: -60, z: -120 },
         screenX: 0,
         screenY: 0,
         visible: false
@@ -394,6 +472,18 @@ const compassDirection = computed(() => {
   return 'NW'
 })
 
+const getBadgeColor = (key: SceneKey) => {
+  if (key === 'inside_bar') return 'bg-fuchsia-400'
+  if (key === 'cyber_mall') return 'bg-cyan-400'
+  return 'bg-emerald-400'
+}
+
+const getBadgeStyle = (key: SceneKey) => {
+  if (key === 'inside_bar') return 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40'
+  if (key === 'cyber_mall') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+  return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+}
+
 const initVR360 = () => {
   if (!canvasContainer.value) return
 
@@ -426,8 +516,9 @@ const initVR360 = () => {
     isLoading.value = false
   })
 
-  // Preload second scene texture in background for instant scene switching
+  // Preload remaining scene textures in background for instant scene switching
   preloadTexture('inside_bar')
+  preloadTexture('cyber_mall')
 
   // Event Listeners
   const domElement = renderer.domElement
@@ -439,7 +530,7 @@ const initVR360 = () => {
   animate()
 }
 
-const preloadTexture = (sceneKey: 'outdoor' | 'inside_bar') => {
+const preloadTexture = (sceneKey: SceneKey) => {
   const textureUrl = scenes[sceneKey].texture
   if (!loadedTextures[textureUrl]) {
     const textureLoader = new THREE.TextureLoader()
@@ -450,7 +541,7 @@ const preloadTexture = (sceneKey: 'outdoor' | 'inside_bar') => {
   }
 }
 
-const loadSceneTexture = (sceneKey: 'outdoor' | 'inside_bar', callback?: () => void) => {
+const loadSceneTexture = (sceneKey: SceneKey, callback?: () => void) => {
   const textureUrl = scenes[sceneKey].texture
 
   if (loadedTextures[textureUrl]) {
@@ -484,16 +575,15 @@ const loadSceneTexture = (sceneKey: 'outdoor' | 'inside_bar', callback?: () => v
   )
 }
 
-const switchScene = (targetKey: 'outdoor' | 'inside_bar') => {
+const switchScene = (targetKey: SceneKey) => {
   if (currentSceneId.value === targetKey || isTransitioning.value) return
 
   targetSceneId.value = targetKey
   isTransitioning.value = true
+  isLocationMenuOpen.value = false
 
   // Fast FOV zoom warp effect for teleportation
-  const startFov = camera.fov
   let frame = 0
-
   const warpInterval = setInterval(() => {
     frame++
     camera.fov = Math.max(20, camera.fov - 4)
@@ -508,8 +598,8 @@ const switchScene = (targetKey: 'outdoor' | 'inside_bar') => {
       currentHotspots.value = scenes[targetKey].hotspots
       loadSceneTexture(targetKey)
 
-      // Reset camera orientation for clear view
-      lon = targetKey === 'inside_bar' ? 0 : 45
+      // Reset camera orientation for optimal initial angle
+      lon = targetKey === 'inside_bar' ? 0 : (targetKey === 'cyber_mall' ? 0 : 45)
       lat = 0
 
       setTimeout(() => {
@@ -521,6 +611,10 @@ const switchScene = (targetKey: 'outdoor' | 'inside_bar') => {
       }, 300)
     }
   }, 20)
+}
+
+const selectSceneFromMenu = (targetKey: SceneKey) => {
+  switchScene(targetKey)
 }
 
 const onHotspotClick = (spot: Hotspot) => {
@@ -535,6 +629,7 @@ const onPointerDown = (event: PointerEvent) => {
   if (event.isPrimary === false) return
 
   isUserInteracting = true
+  isLocationMenuOpen.value = false
 
   onPointerDownPointerX = event.clientX
   onPointerDownPointerY = event.clientY
