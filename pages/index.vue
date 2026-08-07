@@ -3,7 +3,7 @@
     <!-- VR Canvas Container -->
     <div ref="canvasContainer" class="w-full h-full cursor-grab active:cursor-grabbing"></div>
 
-    <!-- Loading Screen -->
+    <!-- Scene Transition / Loading Overlay -->
     <Transition
       enter-active-class="transition duration-500 ease-out"
       enter-from-class="opacity-0"
@@ -13,24 +13,26 @@
       leave-to-class="opacity-0"
     >
       <div
-        v-if="isLoading"
+        v-if="isLoading || isTransitioning"
         class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gray-950 text-white"
       >
         <div class="relative flex items-center justify-center mb-8">
           <div class="w-24 h-24 border-4 border-cyan-500/20 border-t-cyan-400 rounded-full animate-spin"></div>
           <div class="absolute w-16 h-16 border-4 border-fuchsia-500/20 border-b-fuchsia-500 rounded-full animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
-          <Compass class="w-8 h-8 text-cyan-400 absolute animate-pulse" />
+          <LogIn v-if="targetSceneId === 'inside_bar'" class="w-8 h-8 text-cyan-400 absolute animate-bounce" />
+          <LogOut v-else-if="targetSceneId === 'outdoor'" class="w-8 h-8 text-emerald-400 absolute animate-bounce" />
+          <Compass v-else class="w-8 h-8 text-cyan-400 absolute animate-pulse" />
         </div>
         <h2 class="font-serif text-3xl font-bold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-400 to-emerald-400 mb-3 uppercase">
-          NEO-KYOTO VR-360
+          {{ isTransitioning ? (currentSceneId === 'outdoor' ? 'ENTERING THE CHRONOS CLUB...' : 'RETURNING TO NEO-KYOTO...') : 'NEO-KYOTO VR-360' }}
         </h2>
         <p class="text-xs tracking-widest text-cyan-400/80 font-mono mb-6 uppercase">
-          Loading Equirectangular Environment... {{ loadProgress }}%
+          {{ isTransitioning ? 'Warping Neural Environment...' : `Loading Environment... ${loadProgress}%` }}
         </p>
         <div class="w-64 h-1.5 bg-gray-800 rounded-full overflow-hidden border border-cyan-500/30">
           <div
             class="h-full bg-gradient-to-r from-cyan-500 via-fuchsia-500 to-emerald-400 transition-all duration-300"
-            :style="{ width: loadProgress + '%' }"
+            :style="{ width: (isTransitioning ? 100 : loadProgress) + '%' }"
           ></div>
         </div>
       </div>
@@ -38,12 +40,19 @@
 
     <!-- Top UI Header Overlay -->
     <header class="absolute top-0 inset-x-0 z-30 p-6 flex justify-between items-start pointer-events-none">
-      <div class="flex items-center gap-4 bg-gray-900/80 backdrop-blur-md border border-cyan-500/30 px-5 py-3 rounded-2xl shadow-2xl pointer-events-auto">
-        <div class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></div>
+      <div class="flex items-center gap-4 bg-gray-900/85 backdrop-blur-md border border-cyan-500/30 px-5 py-3 rounded-2xl shadow-2xl pointer-events-auto">
+        <div :class="['w-3 h-3 rounded-full animate-ping', currentSceneId === 'inside_bar' ? 'bg-fuchsia-400' : 'bg-cyan-400']"></div>
         <div>
           <h1 class="font-bold text-base md:text-lg tracking-wider text-white flex items-center gap-2">
-            <span>NEO-KYOTO 2099</span>
-            <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 uppercase font-mono">VR-360 Live</span>
+            <span>{{ scenes[currentSceneId].name }}</span>
+            <span
+              :class="[
+                'text-[10px] px-2 py-0.5 rounded border uppercase font-mono',
+                currentSceneId === 'inside_bar' ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+              ]"
+            >
+              {{ currentSceneId === 'inside_bar' ? 'BAR INTERIOR' : 'CITY SKYLINE' }}
+            </span>
           </h1>
           <p class="text-xs text-gray-400 font-mono flex items-center gap-2">
             <span>HEADING: <strong class="text-cyan-400 font-semibold">{{ currentHeading }}° {{ compassDirection }}</strong></span>
@@ -55,6 +64,17 @@
 
       <!-- Action Badges / Top Right -->
       <div class="flex items-center gap-3 pointer-events-auto">
+        <!-- Quick Switch Location Button -->
+        <button
+          @click="switchScene(currentSceneId === 'outdoor' ? 'inside_bar' : 'outdoor')"
+          class="p-3 bg-gradient-to-r from-fuchsia-600/80 to-cyan-600/80 hover:from-fuchsia-500 hover:to-cyan-500 backdrop-blur-md border border-fuchsia-400/50 text-white font-medium text-xs rounded-2xl transition-all shadow-lg flex items-center gap-2 font-mono tracking-wider"
+        >
+          <LogIn v-if="currentSceneId === 'outdoor'" class="w-4 h-4" />
+          <LogOut v-else class="w-4 h-4" />
+          <span class="hidden sm:inline">{{ currentSceneId === 'outdoor' ? 'ENTER BAR' : 'EXIT TO CITY' }}</span>
+        </button>
+
+        <!-- Audio Button -->
         <button
           @click="toggleAudio"
           :class="[
@@ -64,7 +84,7 @@
         >
           <Volume2 v-if="isAudioPlaying" class="w-4 h-4 text-cyan-400 animate-pulse" />
           <VolumeX v-else class="w-4 h-4" />
-          <span class="hidden sm:inline">{{ isAudioPlaying ? 'AUDIO ACTIVE' : 'MUTED' }}</span>
+          <span class="hidden sm:inline">{{ isAudioPlaying ? 'AUDIO' : 'MUTED' }}</span>
         </button>
 
         <button
@@ -80,22 +100,39 @@
     <!-- Interactive Hotspot DOM Markers (Positioned over 3D sphere) -->
     <div v-if="showHotspots && !isLoading" class="absolute inset-0 z-20 pointer-events-none overflow-hidden">
       <div
-        v-for="spot in hotspots"
+        v-for="spot in currentHotspots"
         :key="spot.id"
         v-show="spot.visible"
         :style="{ transform: `translate3d(${spot.screenX}px, ${spot.screenY}px, 0px)` }"
         class="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-auto group cursor-pointer"
-        @click="activeHotspot = spot"
+        @click="onHotspotClick(spot)"
       >
         <div class="relative flex items-center justify-center">
-          <div class="w-10 h-10 rounded-full bg-cyan-500/20 border-2 border-cyan-400 animate-ping absolute"></div>
-          <div class="w-8 h-8 rounded-full bg-cyan-900/90 border border-cyan-300 shadow-lg flex items-center justify-center text-cyan-300 group-hover:scale-125 transition-transform duration-300">
-            <Info class="w-4 h-4" />
-          </div>
-          <!-- Label Tag -->
-          <div class="absolute left-10 top-1/2 -translate-y-1/2 bg-gray-950/90 backdrop-blur-md border border-cyan-500/40 text-cyan-300 text-xs px-3 py-1.5 rounded-xl whitespace-nowrap shadow-xl opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
-            {{ spot.title }}
-          </div>
+          <!-- Teleport Portal Hotspot (Door / Entry) -->
+          <template v-if="spot.type === 'teleport'">
+            <div class="w-14 h-14 rounded-full bg-fuchsia-500/30 border-2 border-fuchsia-400 animate-ping absolute"></div>
+            <div class="w-10 h-10 rounded-full bg-fuchsia-900/90 border-2 border-fuchsia-300 shadow-xl shadow-fuchsia-500/50 flex items-center justify-center text-fuchsia-200 group-hover:scale-125 transition-transform duration-300">
+              <LogIn v-if="spot.targetScene === 'inside_bar'" class="w-5 h-5 animate-pulse" />
+              <LogOut v-else class="w-5 h-5 animate-pulse" />
+            </div>
+            <!-- Portal Label Badge -->
+            <div class="absolute left-12 top-1/2 -translate-y-1/2 bg-gray-950/95 backdrop-blur-md border border-fuchsia-400 text-fuchsia-200 text-xs px-3.5 py-2 rounded-xl whitespace-nowrap shadow-2xl group-hover:translate-x-1 transition-all flex items-center gap-2 font-mono font-semibold">
+              <Sparkles class="w-3.5 h-3.5 text-fuchsia-400 animate-spin" />
+              <span>{{ spot.title }}</span>
+              <span class="bg-fuchsia-500/30 px-1.5 py-0.5 rounded text-[10px] uppercase text-fuchsia-300 border border-fuchsia-400/40">CLICK TO ENTER</span>
+            </div>
+          </template>
+
+          <!-- Information Hotspot -->
+          <template v-else>
+            <div class="w-10 h-10 rounded-full bg-cyan-500/20 border-2 border-cyan-400 animate-ping absolute"></div>
+            <div class="w-8 h-8 rounded-full bg-cyan-900/90 border border-cyan-300 shadow-lg flex items-center justify-center text-cyan-300 group-hover:scale-125 transition-transform duration-300">
+              <Info class="w-4 h-4" />
+            </div>
+            <div class="absolute left-10 top-1/2 -translate-y-1/2 bg-gray-950/90 backdrop-blur-md border border-cyan-500/40 text-cyan-300 text-xs px-3 py-1.5 rounded-xl whitespace-nowrap shadow-xl opacity-80 group-hover:opacity-100 group-hover:translate-x-1 transition-all">
+              {{ spot.title }}
+            </div>
+          </template>
         </div>
       </div>
     </div>
@@ -134,7 +171,7 @@
             {{ activeHotspot.description }}
           </p>
           <div class="flex justify-between items-center pt-4 border-t border-gray-800 text-xs font-mono text-cyan-400/80">
-            <span>COORDINATES: {{ activeHotspot.coords.x }}, {{ activeHotspot.coords.y }}, {{ activeHotspot.coords.z }}</span>
+            <span>LOCATION: {{ currentSceneId.toUpperCase() }}</span>
             <button
               @click="activeHotspot = null"
               class="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-xl transition-colors font-sans font-medium text-xs"
@@ -148,7 +185,7 @@
 
     <!-- Bottom Floating Toolbar -->
     <footer class="absolute bottom-6 inset-x-0 z-30 flex justify-center pointer-events-none px-6">
-      <div class="bg-gray-900/80 backdrop-blur-md border border-cyan-500/30 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 md:gap-5 pointer-events-auto">
+      <div class="bg-gray-900/85 backdrop-blur-md border border-cyan-500/30 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 md:gap-5 pointer-events-auto">
         <!-- Auto Rotate Toggle -->
         <button
           @click="toggleAutoRotate"
@@ -225,11 +262,14 @@ import {
   ZoomIn,
   ZoomOut,
   Eye,
-  Maximize
+  Maximize,
+  LogIn,
+  LogOut
 } from 'lucide-vue-next'
 
 const canvasContainer = ref<HTMLDivElement | null>(null)
 const isLoading = ref(true)
+const isTransitioning = ref(false)
 const loadProgress = ref(0)
 const isAutoRotate = ref(true)
 const isAudioPlaying = ref(false)
@@ -237,10 +277,15 @@ const showHotspots = ref(true)
 const currentFov = ref(75)
 const currentHeading = ref(0)
 
+const currentSceneId = ref<'outdoor' | 'inside_bar'>('outdoor')
+const targetSceneId = ref<'outdoor' | 'inside_bar' | null>(null)
+
 interface Hotspot {
   id: number
   title: string
-  description: string
+  type: 'info' | 'teleport'
+  targetScene?: 'outdoor' | 'inside_bar'
+  description?: string
   coords: { x: number; y: number; z: number }
   screenX: number
   screenY: number
@@ -249,51 +294,112 @@ interface Hotspot {
 
 const activeHotspot = ref<Hotspot | null>(null)
 
-const hotspots = ref<Hotspot[]>([
-  {
-    id: 1,
-    title: 'NEO-KYOTO Central Citadel',
-    description: 'The monumental core of Neo-Kyoto featuring high-density vertical architecture, energy conduits, and mega-holographic displays.',
-    coords: { x: 0, y: 100, z: -400 },
-    screenX: 0,
-    screenY: 0,
-    visible: false
+// Scene Configurations & Hotspots
+const scenes = {
+  outdoor: {
+    name: 'NEO-KYOTO CITY SKYLINE',
+    texture: '/image/paranoma.png',
+    hotspots: [
+      {
+        id: 1,
+        title: 'ENTER CYBER BAR ("The Chronos Club")',
+        type: 'teleport' as const,
+        targetScene: 'inside_bar' as const,
+        coords: { x: 300, y: -120, z: -280 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 2,
+        title: 'NEO-KYOTO Central Citadel',
+        type: 'info' as const,
+        description: 'The monumental core of Neo-Kyoto featuring high-density vertical architecture, energy conduits, and mega-holographic displays.',
+        coords: { x: 0, y: 100, z: -400 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 3,
+        title: 'Elevated Monorail Network',
+        type: 'info' as const,
+        description: 'Autonomous maglev sky-trains operating at 300 km/h, interconnecting upper urban strata and industrial hubs across the metropolis.',
+        coords: { x: -350, y: -20, z: -250 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 4,
+        title: 'VR Viewport Promenade',
+        type: 'info' as const,
+        description: 'Observation balcony overlooking the multi-level traffic decks, offering panoramic sunset vistas over the futuristic skyline.',
+        coords: { x: 150, y: -160, z: 350 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      }
+    ]
   },
-  {
-    id: 2,
-    title: 'Elevated Monorail Network',
-    description: 'Autonomous maglev sky-trains operating at 300 km/h, interconnecting upper urban strata and industrial hubs across the metropolis.',
-    coords: { x: -350, y: -20, z: -250 },
-    screenX: 0,
-    screenY: 0,
-    visible: false
-  },
-  {
-    id: 3,
-    title: 'Cyber Ramen & Noodle Lounge',
-    description: 'A vibrant street-level eatery illuminated by authentic neon signage, serving hot ramen broth to synth-workers and travelers.',
-    coords: { x: 300, y: -120, z: -280 },
-    screenX: 0,
-    screenY: 0,
-    visible: false
-  },
-  {
-    id: 4,
-    title: 'VR Viewport Promenade',
-    description: 'Observation balcony overlooking the multi-level traffic decks, offering panoramic sunset vistas over the futuristic skyline.',
-    coords: { x: 150, y: -160, z: 350 },
-    screenX: 0,
-    screenY: 0,
-    visible: false
+  inside_bar: {
+    name: 'THE CHRONOS CLUB (BAR INTERIOR)',
+    texture: '/image/inside_bar_paranoma.png',
+    hotspots: [
+      {
+        id: 10,
+        title: 'EXIT BAR -> Return to Neo-Kyoto City',
+        type: 'teleport' as const,
+        targetScene: 'outdoor' as const,
+        coords: { x: 350, y: -20, z: -200 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 11,
+        title: 'Android Bartender (Unit-7)',
+        type: 'info' as const,
+        description: 'Serves rare synthetic spirits, glowing neon cocktails, and cybernetic energy brews to cyber-citizens and travelers.',
+        coords: { x: 60, y: -40, z: -400 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 12,
+        title: 'Live Synthwave Keytar Stage',
+        type: 'info' as const,
+        description: 'Featuring nightly keytar solos and cyber-synth performances with responsive holographic light displays.',
+        coords: { x: 420, y: 10, z: 150 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      },
+      {
+        id: 13,
+        title: 'Holographic Touch Tables & VIP Booth',
+        type: 'info' as const,
+        description: 'High-tech private booths equipped with interactive touch-table interfaces for ordering and digital games.',
+        coords: { x: -380, y: -60, z: -120 },
+        screenX: 0,
+        screenY: 0,
+        visible: false
+      }
+    ]
   }
-])
+}
+
+const currentHotspots = ref<Hotspot[]>(scenes.outdoor.hotspots)
 
 // Three.js Variables
 let scene: THREE.Scene
 let camera: THREE.PerspectiveCamera
 let renderer: THREE.WebGLRenderer
 let sphereMesh: THREE.Mesh
+let sphereMaterial: THREE.MeshBasicMaterial
 let animationFrameId: number
+const loadedTextures: Record<string, THREE.Texture> = {}
 
 // Rotation & Interaction Variables
 let isUserInteracting = false
@@ -331,20 +437,68 @@ const initVR360 = () => {
   camera = new THREE.PerspectiveCamera(75, width / height, 1, 1100)
   camera.target = new THREE.Vector3(0, 0, 0)
 
-  // 3. Geometry & Texture mapping for 360 panorama
+  // 3. Geometry & Material
   const geometry = new THREE.SphereGeometry(500, 60, 40)
   geometry.scale(-1, 1, 1) // Invert geometry so texture faces inward
 
+  sphereMaterial = new THREE.MeshBasicMaterial()
+  sphereMesh = new THREE.Mesh(geometry, sphereMaterial)
+  scene.add(sphereMesh)
+
+  // 4. Renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+  renderer.setPixelRatio(window.devicePixelRatio)
+  renderer.setSize(width, height)
+  canvasContainer.value.appendChild(renderer.domElement)
+
+  // Load initial texture (outdoor scene)
+  loadSceneTexture('outdoor', () => {
+    isLoading.value = false
+  })
+
+  // Preload second scene texture in background for instant scene switching
+  preloadTexture('inside_bar')
+
+  // Event Listeners
+  const domElement = renderer.domElement
+  domElement.addEventListener('pointerdown', onPointerDown)
+  domElement.addEventListener('wheel', onDocumentMouseWheel, { passive: false })
+  window.addEventListener('resize', onWindowResize)
+
+  // Start Animation Loop
+  animate()
+}
+
+const preloadTexture = (sceneKey: 'outdoor' | 'inside_bar') => {
+  const textureUrl = scenes[sceneKey].texture
+  if (!loadedTextures[textureUrl]) {
+    const textureLoader = new THREE.TextureLoader()
+    textureLoader.load(textureUrl, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace
+      loadedTextures[textureUrl] = texture
+    })
+  }
+}
+
+const loadSceneTexture = (sceneKey: 'outdoor' | 'inside_bar', callback?: () => void) => {
+  const textureUrl = scenes[sceneKey].texture
+
+  if (loadedTextures[textureUrl]) {
+    sphereMaterial.map = loadedTextures[textureUrl]
+    sphereMaterial.needsUpdate = true
+    if (callback) callback()
+    return
+  }
+
   const textureLoader = new THREE.TextureLoader()
   textureLoader.load(
-    '/image/paranoma.png',
+    textureUrl,
     (texture) => {
       texture.colorSpace = THREE.SRGBColorSpace
-      const material = new THREE.MeshBasicMaterial({ map: texture })
-      sphereMesh = new THREE.Mesh(geometry, material)
-      scene.add(sphereMesh)
-
-      isLoading.value = false
+      loadedTextures[textureUrl] = texture
+      sphereMaterial.map = texture
+      sphereMaterial.needsUpdate = true
+      if (callback) callback()
     },
     (xhr) => {
       if (xhr.lengthComputable) {
@@ -355,24 +509,56 @@ const initVR360 = () => {
     },
     (err) => {
       console.error('Error loading panorama image:', err)
-      isLoading.value = false
+      if (callback) callback()
     }
   )
+}
 
-  // 4. Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
-  renderer.setPixelRatio(window.devicePixelRatio)
-  renderer.setSize(width, height)
-  canvasContainer.value.appendChild(renderer.domElement)
+const switchScene = (targetKey: 'outdoor' | 'inside_bar') => {
+  if (currentSceneId.value === targetKey || isTransitioning.value) return
 
-  // Event Listeners
-  const domElement = renderer.domElement
-  domElement.addEventListener('pointerdown', onPointerDown)
-  domElement.addEventListener('wheel', onDocumentMouseWheel, { passive: false })
-  window.addEventListener('resize', onWindowResize)
+  targetSceneId.value = targetKey
+  isTransitioning.value = true
 
-  // Start Animation Loop
-  animate()
+  // Fast FOV zoom warp effect for teleportation
+  const startFov = camera.fov
+  let frame = 0
+
+  const warpInterval = setInterval(() => {
+    frame++
+    camera.fov = Math.max(20, camera.fov - 4)
+    camera.updateProjectionMatrix()
+    currentFov.value = camera.fov
+
+    if (frame > 10) {
+      clearInterval(warpInterval)
+
+      // Swap texture & hotspots
+      currentSceneId.value = targetKey
+      currentHotspots.value = scenes[targetKey].hotspots
+      loadSceneTexture(targetKey)
+
+      // Reset camera orientation for clear view
+      lon = targetKey === 'inside_bar' ? 0 : 45
+      lat = 0
+
+      setTimeout(() => {
+        camera.fov = 75
+        camera.updateProjectionMatrix()
+        currentFov.value = 75
+        isTransitioning.value = false
+        targetSceneId.value = null
+      }, 300)
+    }
+  }, 20)
+}
+
+const onHotspotClick = (spot: Hotspot) => {
+  if (spot.type === 'teleport' && spot.targetScene) {
+    switchScene(spot.targetScene)
+  } else {
+    activeHotspot.value = spot
+  }
 }
 
 const onPointerDown = (event: PointerEvent) => {
@@ -427,7 +613,7 @@ const updateHotspots = () => {
   const halfWidth = window.innerWidth / 2
   const halfHeight = window.innerHeight / 2
 
-  hotspots.value.forEach((spot) => {
+  currentHotspots.value.forEach((spot) => {
     const vector = new THREE.Vector3(spot.coords.x, spot.coords.y, spot.coords.z)
 
     // Check if behind camera
@@ -451,7 +637,7 @@ const updateHotspots = () => {
 const animate = () => {
   animationFrameId = requestAnimationFrame(animate)
 
-  if (isAutoRotate.value && !isUserInteracting) {
+  if (isAutoRotate.value && !isUserInteracting && !isTransitioning.value) {
     lon += 0.08
   }
 
