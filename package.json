@@ -19,8 +19,10 @@
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.14.0",
+    "@types/dat.gui": "^0.7.13",
     "@types/three": "^0.185.4",
     "autoprefixer": "^10.5.4",
+    "dat.gui": "^0.7.9",
     "postcss": "^8.5.26",
     "tailwindcss": "^3.4.19"
   }
