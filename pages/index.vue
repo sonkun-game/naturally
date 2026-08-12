@@ -47,7 +47,7 @@
           </h1>
           <p class="text-xs text-gray-400 font-mono flex items-center gap-2">
             <span>HEADING: <strong class="text-cyan-400 font-semibold">{{ currentHeading }}° {{ compassDirection
-                }}</strong></span>
+            }}</strong></span>
             <span>•</span>
             <span>FOV: <strong class="text-fuchsia-400 font-semibold">{{ currentFov.toFixed(0) }}°</strong></span>
           </p>
@@ -495,7 +495,7 @@ const initVR360 = () => {
 
   // 2. Camera
   camera = new THREE.PerspectiveCamera(75, width / height, 1, 1100)
-  camera.target = new THREE.Vector3(0, 0, 0)
+  // camera.target = new THREE.Vector3(0, 0, 0)
 
   // 3. Geometry & Material
   const geometry = new THREE.SphereGeometry(500, 60, 40)
