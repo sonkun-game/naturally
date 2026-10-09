@@ -1,75 +1,12 @@
-# Nuxt Minimal Starter
-
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
-
-## Setup
-
-Make sure to install dependencies:
-
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Mình đọc [pages/index.vue](C:/Users/Admin/Documents/Project/naturally/pages/index.vue). Màn này là trình xem panorama 360° tương tác, gồm các tính năng:
+- Hiển thị panorama 360° bằng Three.js: dùng ảnh làm texture phủ mặt trong của một khối cầu.
+- Ba địa điểm có thể chuyển qua lại: phố Neo-Kyoto, cyber mall và bên trong Chronos Club. Ảnh của các cảnh phụ được tải trước để chuyển cảnh nhanh hơn.
+- Điều hướng giữa các cảnh qua menu “Teleport Destination” hoặc các hotspot dạng cổng. Khi chuyển cảnh có hiệu ứng zoom và màn hình tải.
+- Xoay góc nhìn bằng cách kéo chuột; có thể bật/tắt tự xoay 360°.
+- Phóng to/thu nhỏ bằng nút trên thanh công cụ hoặc cuộn chuột. FOV được giới hạn trong khoảng 30°–100°.
+- Hiển thị hướng nhìn: heading theo độ và la bàn 8 hướng; đồng thời hiển thị FOV hiện tại.
+- Hotspot tương tác được chiếu lên màn hình theo vị trí trong panorama. Có thể bật/tắt hotspot; hotspot thông tin mở hộp thoại mô tả, còn hotspot cổng chuyển sang cảnh khác.
+- Âm thanh nền tổng hợp bằng Web Audio API, bật/tắt được.
+- Chế độ toàn màn hình và đặt lại góc nhìn.
+- Giao diện trạng thái hiển thị cảnh hiện tại, danh mục, tiến trình tải và trạng thái chuyển cảnh.
+- Thích ứng khi đổi kích thước cửa sổ, cập nhật camera và renderer.
