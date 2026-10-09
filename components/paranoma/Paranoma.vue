@@ -68,13 +68,13 @@
           <!-- Location Menu Dropdown -->
           <div v-if="isLocationMenuOpen"
             class="absolute right-0 top-14 w-64 bg-gray-900/95 backdrop-blur-md border border-cyan-500/40 rounded-2xl p-2 shadow-2xl z-50 flex flex-col gap-1">
-            <button v-for="(sceneConfig, key) in scenes" :key="key" @click="selectSceneFromMenu(key as SceneKey)"
+            <button v-for="sceneOption in sceneOptions" :key="sceneOption.key" @click="selectSceneFromMenu(sceneOption.key)"
               :class="[
                 'w-full text-left px-3.5 py-2.5 rounded-xl font-mono text-xs flex items-center justify-between transition-colors',
-                currentSceneId === key ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                currentSceneId === sceneOption.key ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               ]">
-              <span>{{ sceneConfig.name }}</span>
-              <span class="text-[10px] opacity-75">({{ sceneConfig.category }})</span>
+              <span>{{ sceneOption.sceneConfig.name }}</span>
+              <span class="text-[10px] opacity-75">({{ sceneOption.sceneConfig.category }})</span>
             </button>
           </div>
         </div>
@@ -253,7 +253,13 @@ import {
   ChevronDown
 } from 'lucide-vue-next'
 
-export type SceneKey = string
+export type SceneKey =
+  | 'outdoor'
+  | 'cyber_mall'
+  | 'inside_bar'
+  | 'ocean'
+  | 'shipwreck'
+  | 'coral'
 
 export interface Hotspot {
   id: number
@@ -274,7 +280,10 @@ export interface PanoramaScene {
   hotspots: Hotspot[]
 }
 
-const props = defineProps<{ scenes: Record<SceneKey, PanoramaScene>; initialSceneId: SceneKey }>()
+const props = defineProps<{
+  scenes: Partial<Record<SceneKey, PanoramaScene>>
+  initialSceneId: SceneKey
+}>()
 const emit = defineEmits<{
   (event: 'scene-change', sceneId: SceneKey): void
   (event: 'heading-change', heading: number): void
@@ -282,6 +291,11 @@ const emit = defineEmits<{
   (event: 'hotspot-select', hotspot: Hotspot): void
 }>()
 const scenes = props.scenes
+const sceneOptions = computed(() =>
+  Object.entries(scenes).flatMap(([key, sceneConfig]) =>
+    sceneConfig ? [{ key: key as SceneKey, sceneConfig }] : []
+  )
+)
 
 const getScene = (sceneKey: SceneKey): PanoramaScene => {
   const sceneConfig = scenes[sceneKey]
@@ -380,14 +394,15 @@ const initVR360 = () => {
   renderer.setSize(width, height)
   canvasContainer.value.appendChild(renderer.domElement)
 
-  // Load initial texture (outdoor scene)
-  loadSceneTexture('outdoor', () => {
+  // Load the configured initial scene.
+  loadSceneTexture(props.initialSceneId, () => {
     isLoading.value = false
   })
 
-  // Preload remaining scene textures in background for instant scene switching
-  preloadTexture('inside_bar')
-  preloadTexture('cyber_mall')
+  // Preload the other configured scenes for faster scene switching.
+  sceneOptions.value.forEach(({ key }) => {
+    if (key !== props.initialSceneId) preloadTexture(key)
+  })
 
   // Event Listeners
   const domElement = renderer.domElement

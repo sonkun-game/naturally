@@ -13,9 +13,9 @@
           image="/image/paranoma.png"
         />
         <SquareLink
-          title="Cyber Punk World"
-          link="/paranoma/cyberpunk"
-          image="/image/paranoma.png"
+          title="Ocean World"
+          link="/paranoma/ocean"
+          image="/img/paranoma/ocean/ocean.png"
         />
         <SquareLink
           title="Cyber Punk World"
