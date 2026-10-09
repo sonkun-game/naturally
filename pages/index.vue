@@ -18,9 +18,9 @@
           image="/img/paranoma/ocean/ocean.png"
         />
         <SquareLink
-          title="Cyber Punk World"
-          link="/paranoma/cyberpunk"
-          image="/image/paranoma.png"
+          title="Kingdom World"
+          link="/paranoma/kingdom"
+          image="/img/paranoma/kingdom/kingdom.png"
         />
       </div>
     </section>

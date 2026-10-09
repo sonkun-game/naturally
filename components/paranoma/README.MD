@@ -14,7 +14,7 @@ import Paranoma from '~/components/paranoma/Paranoma.vue'
 
 | Prop | Kiểu | Bắt buộc | Mô tả |
 | --- | --- | --- | --- |
-| `scenes` | `Partial<Record<SceneKey, PanoramaScene>>` | Có | Các cảnh panorama, bao gồm tên hiển thị, danh mục, đường dẫn ảnh và hotspot. `SceneKey` hiện gồm `outdoor`, `cyber_mall`, `inside_bar`, `ocean`, `shipwreck` và `coral`. |
+| `scenes` | `Partial<Record<SceneKey, PanoramaScene>>` | Có | Các cảnh panorama, bao gồm tên hiển thị, danh mục, đường dẫn ảnh và hotspot. `SceneKey` hiện gồm `outdoor`, `cyber_mall`, `inside_bar`, `ocean`, `shipwreck`, `coral`, `kingdom`, `inside_market`, `inside_house_of_the_man` và `inside_castle`. |
 | `initialSceneId` | `SceneKey` | Có | Khóa cảnh mở đầu; phải tồn tại trong `scenes`. |
 
 Mỗi hotspot cần `id`, `title`, `type` (`info` hoặc `teleport`) và tọa độ 3D `coords: { x, y, z }`. Hotspot `info` nên có `description`; hotspot `teleport` cần `targetScene` khớp với một khóa trong `scenes`. `screenX`, `screenY`, `visible` là trạng thái chiếu lên màn hình do component cập nhật.

@@ -260,6 +260,10 @@ export type SceneKey =
   | 'ocean'
   | 'shipwreck'
   | 'coral'
+  | 'kingdom'
+  | 'inside_market'
+  | 'inside_house_of_the_man'
+  | 'inside_castle'
 
 export interface Hotspot {
   id: number
